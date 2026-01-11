@@ -61,7 +61,7 @@
 
 /* 管理画面ヘッダー */
 .admin-header {
-    background: var(--text-primary);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     padding: 1rem 2rem;
     position: sticky;
@@ -270,7 +270,7 @@
 }
 
 .btn-secondary {
-    background: var(--text-primary);
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
 }
 

@@ -43,6 +43,27 @@ jobs:
 
       - name: Deployment Complete
         run: |
-          echo "✅ デプロイ完了！"
-          echo "🌐 URL: ${{ steps.deployment.outputs.page_url }}"
-          echo "📅 時刻: $(date '+%Y-%m-%d %H:%M:%S')"
+          echo "Deploy Complete!"
+          echo "URL: ${{ steps.deployment.outputs.page_url }}"
+
+      - name: Notify Slack
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DEPLOY_STATUS: ${{ job.status }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            if [ "$DEPLOY_STATUS" = "success" ]; then
+              STATUS_TEXT="社内報サイト デプロイ完了"
+            else
+              STATUS_TEXT="社内報サイト デプロイ失敗"
+            fi
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{ \"text\": \"${STATUS_TEXT}\n\n*Commit:* ${COMMIT_SHA:0:7}\n*\n*${ACTOR}\n\n<${PAGE_URL}|Site> | <https://github.com/${REPO}/actions/runs/${RUN_ID}|Actions>\" }" \
+              "$SLACK_WEBHOOK_URL"
+          fi
