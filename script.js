@@ -1,6 +1,12 @@
 // ========================================
-// BEST COW 社内報 - JavaScript
+// ベステラ社内報 - JavaScript
 // ========================================
+
+// ビルド情報（デプロイ時に自動更新）
+const BUILD_INFO = {
+    version: "1.1.0",
+    buildDate: "2026-01-09T18:45:00+09:00"
+};
 
 // サンプル記事データ
 const articlesData = [
@@ -486,6 +492,13 @@ function getCurrentFilter() {
 // ========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+    // 最終更新日時を表示
+    const lastUpdatedEl = document.getElementById("last-updated");
+    if (lastUpdatedEl) {
+        const date = new Date(BUILD_INFO.buildDate);
+        lastUpdatedEl.textContent = date.toLocaleString("ja-JP") + ` (v${BUILD_INFO.version})`;
+    }
+
     // 記事一覧を表示
     renderArticles();
 
