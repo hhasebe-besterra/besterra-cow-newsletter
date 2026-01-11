@@ -24,7 +24,7 @@
                     <label for="admin-password">パスワード</label>
                     <input type="password" id="admin-password" placeholder="管理者パスワードを入力" required>
                 </div>
-                <button type="submit" class="btn btn-primary">ログイン</button>
+                <button type="submit" class="btn btn-primary btn-full">ログイン</button>
                 <p class="login-error" id="login-error"></p>
             </form>
             <a href="index.html" class="back-link">トップページに戻る</a>
@@ -41,7 +41,7 @@
                     <span class="admin-title">管理画面</span>
                 </div>
                 <div class="admin-nav">
-                    <a href="index.html" class="btn btn-outline">サイトを見る</a>
+                    <a href="index.html" class="btn btn-outline" target="_blank">サイトを見る</a>
                     <button class="btn btn-secondary" onclick="logout()">ログアウト</button>
                 </div>
             </div>
@@ -52,18 +52,22 @@
             <!-- 統計 -->
             <section class="admin-stats">
                 <div class="stat-card">
+                    <span class="stat-icon">📝</span>
                     <span class="stat-number" id="stat-articles">0</span>
                     <span class="stat-label">記事数</span>
                 </div>
                 <div class="stat-card">
+                    <span class="stat-icon">👁️</span>
                     <span class="stat-number" id="stat-views">0</span>
                     <span class="stat-label">総閲覧数</span>
                 </div>
                 <div class="stat-card">
+                    <span class="stat-icon">💬</span>
                     <span class="stat-number" id="stat-comments">0</span>
                     <span class="stat-label">コメント数</span>
                 </div>
                 <div class="stat-card">
+                    <span class="stat-icon">👍</span>
                     <span class="stat-number" id="stat-reactions">0</span>
                     <span class="stat-label">リアクション数</span>
                 </div>
@@ -72,97 +76,253 @@
             <!-- 記事管理 -->
             <section class="admin-section">
                 <div class="section-header">
-                    <h2>記事管理</h2>
-                    <button class="btn btn-primary" onclick="openArticleModal()">+ 新規記事</button>
+                    <h2>📰 記事管理</h2>
+                    <button class="btn btn-primary btn-large" onclick="openArticleModal()">
+                        <span class="btn-icon">+</span> 新しい記事を作成
+                    </button>
                 </div>
-                <div class="articles-table-container">
-                    <table class="articles-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>タイトル</th>
-                                <th>カテゴリ</th>
-                                <th>著者</th>
-                                <th>日付</th>
-                                <th>閲覧数</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="articles-tbody">
-                            <!-- JavaScriptで挿入 -->
-                        </tbody>
-                    </table>
+
+                <div class="help-text">
+                    <span class="help-icon">💡</span>
+                    記事をクリックして編集できます。右側のボタンで削除できます。
+                </div>
+
+                <div class="articles-list" id="articles-list">
+                    <!-- JavaScriptで挿入 -->
                 </div>
             </section>
 
-            <!-- パスワード変更 -->
+            <!-- 設定 -->
             <section class="admin-section">
-                <h2>パスワード変更</h2>
-                <form id="password-form" class="password-form">
-                    <div class="form-group">
-                        <label for="new-password">新しいパスワード</label>
-                        <input type="password" id="new-password" placeholder="新しいパスワード" required>
+                <h2>⚙️ 設定</h2>
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <h3>🔑 パスワード変更</h3>
+                        <p>管理者パスワードを変更します</p>
+                        <form id="password-form" class="password-form">
+                            <div class="form-group">
+                                <input type="password" id="new-password" placeholder="新しいパスワード" required>
+                            </div>
+                            <div class="form-group">
+                                <input type="password" id="confirm-password" placeholder="パスワードを再入力" required>
+                            </div>
+                            <button type="submit" class="btn btn-secondary">変更する</button>
+                        </form>
                     </div>
-                    <div class="form-group">
-                        <label for="confirm-password">パスワード確認</label>
-                        <input type="password" id="confirm-password" placeholder="パスワードを再入力" required>
-                    </div>
-                    <button type="submit" class="btn btn-secondary">パスワードを変更</button>
-                </form>
+                </div>
             </section>
         </main>
     </div>
 
-    <!-- 記事編集モーダル -->
-    <div class="modal" id="article-modal">
-        <div class="modal-content modal-large">
-            <button class="modal-close" onclick="closeArticleModal()">&times;</button>
-            <h2 id="modal-title">新規記事</h2>
-            <form id="article-form">
-                <input type="hidden" id="article-id">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="article-title">タイトル *</label>
-                        <input type="text" id="article-title" required>
+    <!-- 記事編集モーダル（フルスクリーン） -->
+    <div class="editor-overlay" id="editor-overlay" style="display: none;">
+        <div class="editor-container">
+            <!-- エディターヘッダー -->
+            <header class="editor-header">
+                <div class="editor-header-left">
+                    <button class="btn btn-icon-only" onclick="closeArticleModal()" title="閉じる">✕</button>
+                    <h1 id="editor-title">新しい記事を作成</h1>
+                </div>
+                <div class="editor-header-right">
+                    <button class="btn btn-outline" onclick="closeArticleModal()">キャンセル</button>
+                    <button class="btn btn-primary" onclick="saveArticleFromEditor()">
+                        <span class="btn-icon">💾</span> 保存する
+                    </button>
+                </div>
+            </header>
+
+            <!-- エディター本体 -->
+            <div class="editor-body">
+                <!-- 左側：入力エリア -->
+                <div class="editor-input">
+                    <input type="hidden" id="article-id">
+
+                    <!-- 基本情報 -->
+                    <div class="editor-section">
+                        <h2 class="editor-section-title">
+                            <span class="section-number">1</span>
+                            基本情報を入力
+                        </h2>
+
+                        <div class="form-group">
+                            <label for="article-title">
+                                タイトル
+                                <span class="required">必須</span>
+                            </label>
+                            <input type="text" id="article-title" placeholder="例: No.1 人事部・石井/社長室・牛山" required>
+                            <span class="form-hint">記事のタイトルを入力してください</span>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="article-category">
+                                    カテゴリ
+                                    <span class="required">必須</span>
+                                </label>
+                                <select id="article-category" required>
+                                    <option value="">選択してください</option>
+                                    <option value="人事部">👥 人事部</option>
+                                    <option value="社長室">👔 社長室</option>
+                                    <option value="営業部">💼 営業部</option>
+                                    <option value="開発部">💻 開発部</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="article-author">
+                                    著者名
+                                    <span class="required">必須</span>
+                                </label>
+                                <input type="text" id="article-author" placeholder="例: 牛山" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="article-date">
+                                    投稿日
+                                    <span class="required">必須</span>
+                                </label>
+                                <input type="date" id="article-date" required>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="article-category">カテゴリ *</label>
-                        <select id="article-category" required>
-                            <option value="">選択してください</option>
-                            <option value="人事部">人事部</option>
-                            <option value="社長室">社長室</option>
-                            <option value="営業部">営業部</option>
-                            <option value="開発部">開発部</option>
-                        </select>
+
+                    <!-- 画像選択 -->
+                    <div class="editor-section">
+                        <h2 class="editor-section-title">
+                            <span class="section-number">2</span>
+                            画像を選択
+                        </h2>
+
+                        <div class="image-selector">
+                            <div class="image-tabs">
+                                <button type="button" class="image-tab active" onclick="switchImageTab('gallery')">
+                                    🖼️ ギャラリーから選ぶ
+                                </button>
+                                <button type="button" class="image-tab" onclick="switchImageTab('url')">
+                                    🔗 URLを入力
+                                </button>
+                            </div>
+
+                            <div class="image-tab-content" id="tab-gallery">
+                                <div class="image-gallery">
+                                    <div class="image-option selected" data-url="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=200&h=100&fit=crop" alt="チームワーク">
+                                        <span>チームワーク</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=200&h=100&fit=crop" alt="歓迎会">
+                                        <span>歓迎会</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=100&fit=crop" alt="ビジネス">
+                                        <span>ビジネス</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=200&h=100&fit=crop" alt="データ分析">
+                                        <span>データ分析</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=200&h=100&fit=crop" alt="オフィス">
+                                        <span>オフィス</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=200&h=100&fit=crop" alt="イベント">
+                                        <span>イベント</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&h=100&fit=crop" alt="会議室">
+                                        <span>会議室</span>
+                                    </div>
+                                    <div class="image-option" data-url="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop">
+                                        <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=200&h=100&fit=crop" alt="プレゼン">
+                                        <span>プレゼン</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="image-tab-content" id="tab-url" style="display: none;">
+                                <div class="form-group">
+                                    <input type="url" id="article-image" placeholder="https://example.com/image.jpg">
+                                    <span class="form-hint">画像のURLを入力してください（任意）</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 本文入力 -->
+                    <div class="editor-section">
+                        <h2 class="editor-section-title">
+                            <span class="section-number">3</span>
+                            記事の内容を入力
+                        </h2>
+
+                        <div class="form-group">
+                            <label for="article-excerpt">
+                                要約（一覧に表示されます）
+                                <span class="required">必須</span>
+                            </label>
+                            <textarea id="article-excerpt" rows="2" placeholder="記事の要約を1〜2文で入力してください" required></textarea>
+                            <span class="form-hint">記事一覧で表示される短い説明文です</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="article-body">
+                                本文
+                                <span class="required">必須</span>
+                            </label>
+
+                            <!-- 簡易ツールバー -->
+                            <div class="editor-toolbar">
+                                <button type="button" class="toolbar-btn" onclick="insertTemplate('greeting')" title="挨拶文を挿入">
+                                    👋 挨拶文
+                                </button>
+                                <button type="button" class="toolbar-btn" onclick="insertTemplate('list')" title="リストを挿入">
+                                    📋 リスト
+                                </button>
+                                <button type="button" class="toolbar-btn" onclick="insertTemplate('divider')" title="区切り線を挿入">
+                                    ➖ 区切り線
+                                </button>
+                                <button type="button" class="toolbar-btn" onclick="insertTemplate('signature')" title="署名を挿入">
+                                    ✍️ 署名
+                                </button>
+                            </div>
+
+                            <textarea id="article-body" rows="15" placeholder="記事の本文を入力してください
+
+改行するには Enter キーを押してください。
+段落を分けるには 空行を入れてください。" required></textarea>
+                            <span class="form-hint">💡 ヒント: 改行は Enter キー、段落は空行で区切ります</span>
+                        </div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="article-author">著者 *</label>
-                        <input type="text" id="article-author" required>
+
+                <!-- 右側：プレビュー -->
+                <div class="editor-preview">
+                    <div class="preview-header">
+                        <h2>📱 プレビュー</h2>
+                        <span class="preview-hint">実際の表示イメージ</span>
                     </div>
-                    <div class="form-group">
-                        <label for="article-date">日付 *</label>
-                        <input type="date" id="article-date" required>
+                    <div class="preview-content">
+                        <div class="preview-card" id="preview-card">
+                            <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop" alt="" class="preview-image" id="preview-image">
+                            <div class="preview-body">
+                                <span class="preview-category" id="preview-category">カテゴリ</span>
+                                <h3 class="preview-title" id="preview-title">タイトルがここに表示されます</h3>
+                                <p class="preview-excerpt" id="preview-excerpt">要約がここに表示されます...</p>
+                                <div class="preview-meta">
+                                    <span id="preview-date">2026/01/09</span>
+                                    <span id="preview-author">著者名</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preview-detail" id="preview-detail">
+                            <h4>本文プレビュー</h4>
+                            <div class="preview-detail-body" id="preview-body">
+                                本文がここに表示されます...
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label for="article-image">画像URL</label>
-                    <input type="url" id="article-image" placeholder="https://...">
-                </div>
-                <div class="form-group">
-                    <label for="article-excerpt">要約 *</label>
-                    <textarea id="article-excerpt" rows="2" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="article-body">本文 *</label>
-                    <textarea id="article-body" rows="10" required></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-outline" onclick="closeArticleModal()">キャンセル</button>
-                    <button type="submit" class="btn btn-primary">保存</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
