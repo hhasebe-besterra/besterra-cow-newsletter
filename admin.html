@@ -301,27 +301,58 @@
                                 <span class="required">必須</span>
                             </label>
 
-                            <!-- 簡易ツールバー -->
-                            <div class="editor-toolbar">
-                                <button type="button" class="toolbar-btn" onclick="insertTemplate('greeting')" title="挨拶文を挿入">
-                                    👋 挨拶文
-                                </button>
-                                <button type="button" class="toolbar-btn" onclick="insertTemplate('list')" title="リストを挿入">
-                                    📋 リスト
-                                </button>
-                                <button type="button" class="toolbar-btn" onclick="insertTemplate('divider')" title="区切り線を挿入">
-                                    ➖ 区切り線
-                                </button>
-                                <button type="button" class="toolbar-btn" onclick="insertTemplate('signature')" title="署名を挿入">
-                                    ✍️ 署名
-                                </button>
+                            <!-- リッチツールバー -->
+                            <div class="editor-toolbar-rich">
+                                <div class="toolbar-group">
+                                    <span class="toolbar-label">テンプレート</span>
+                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('greeting')" title="挨拶文">
+                                        👋
+                                    </button>
+                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('list')" title="リスト">
+                                        📋
+                                    </button>
+                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('heading')" title="見出し">
+                                        📌
+                                    </button>
+                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('quote')" title="引用">
+                                        💬
+                                    </button>
+                                </div>
+                                <div class="toolbar-divider"></div>
+                                <div class="toolbar-group">
+                                    <span class="toolbar-label">画像挿入</span>
+                                    <button type="button" class="toolbar-btn toolbar-btn-primary" onclick="openImageInsertModal()" title="画像を挿入">
+                                        🖼️ 画像
+                                    </button>
+                                    <button type="button" class="toolbar-btn toolbar-btn-ai" onclick="openAIImageModal()" title="AI画像生成">
+                                        ✨ AI生成
+                                    </button>
+                                </div>
+                                <div class="toolbar-divider"></div>
+                                <div class="toolbar-group">
+                                    <span class="toolbar-label">装飾</span>
+                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('divider')" title="区切り線">
+                                        ➖
+                                    </button>
+                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('signature')" title="署名">
+                                        ✍️
+                                    </button>
+                                </div>
                             </div>
 
-                            <textarea id="article-body" rows="15" placeholder="記事の本文を入力してください
+                            <textarea id="article-body" rows="18" placeholder="記事の本文を入力してください
 
-改行するには Enter キーを押してください。
-段落を分けるには 空行を入れてください。" required></textarea>
-                            <span class="form-hint">💡 ヒント: 改行は Enter キー、段落は空行で区切ります</span>
+【画像の挿入方法】
+ツールバーの「🖼️ 画像」または「✨ AI生成」ボタンをクリック
+
+【書式例】
+## 見出し
+本文テキスト...
+
+[IMAGE:https://example.com/image.jpg|キャプション|center]
+
+さらに本文..." required></textarea>
+                            <span class="form-hint">💡 画像は [IMAGE:URL|キャプション|配置] の形式で挿入されます。配置: left, center, right, full</span>
                         </div>
                     </div>
                 </div>
@@ -354,6 +385,141 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像挿入モーダル -->
+    <div class="insert-modal" id="image-insert-modal" style="display: none;">
+        <div class="insert-modal-content">
+            <div class="insert-modal-header">
+                <h3>🖼️ 記事に画像を挿入</h3>
+                <button class="btn btn-icon-only" onclick="closeImageInsertModal()">✕</button>
+            </div>
+            <div class="insert-modal-body">
+                <div class="insert-tabs">
+                    <button class="insert-tab active" onclick="switchInsertTab('gallery')">ギャラリー</button>
+                    <button class="insert-tab" onclick="switchInsertTab('upload')">アップロード</button>
+                    <button class="insert-tab" onclick="switchInsertTab('url')">URL入力</button>
+                </div>
+
+                <div class="insert-tab-content" id="insert-gallery">
+                    <div class="insert-gallery">
+                        <div class="insert-image-option" data-url="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800">
+                            <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=200" alt="">
+                        </div>
+                        <div class="insert-image-option" data-url="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800">
+                            <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=200" alt="">
+                        </div>
+                        <div class="insert-image-option" data-url="https://images.unsplash.com/photo-1497366216548-37526070297c?w=800">
+                            <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=200" alt="">
+                        </div>
+                        <div class="insert-image-option" data-url="https://images.unsplash.com/photo-1551434678-e076c223a692?w=800">
+                            <img src="https://images.unsplash.com/photo-1551434678-e076c223a692?w=200" alt="">
+                        </div>
+                        <div class="insert-image-option" data-url="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800">
+                            <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=200" alt="">
+                        </div>
+                        <div class="insert-image-option" data-url="https://images.unsplash.com/photo-1531973576160-7125cd663d86?w=800">
+                            <img src="https://images.unsplash.com/photo-1531973576160-7125cd663d86?w=200" alt="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insert-tab-content" id="insert-upload" style="display: none;">
+                    <div class="insert-upload-area" id="insert-upload-area">
+                        <span class="upload-icon">📷</span>
+                        <p>クリックまたはドラッグ&ドロップ</p>
+                        <input type="file" id="insert-image-file" accept="image/*" hidden>
+                    </div>
+                    <div class="insert-upload-preview" id="insert-upload-preview" style="display: none;">
+                        <img src="" alt="" id="insert-preview-img">
+                    </div>
+                </div>
+
+                <div class="insert-tab-content" id="insert-url" style="display: none;">
+                    <input type="url" id="insert-image-url" placeholder="https://example.com/image.jpg" class="insert-url-input">
+                </div>
+
+                <div class="insert-options">
+                    <div class="form-group">
+                        <label>キャプション（任意）</label>
+                        <input type="text" id="insert-caption" placeholder="画像の説明文">
+                    </div>
+                    <div class="form-group">
+                        <label>配置</label>
+                        <div class="insert-align-options">
+                            <label class="align-option">
+                                <input type="radio" name="insert-align" value="left"> 左寄せ
+                            </label>
+                            <label class="align-option">
+                                <input type="radio" name="insert-align" value="center" checked> 中央
+                            </label>
+                            <label class="align-option">
+                                <input type="radio" name="insert-align" value="right"> 右寄せ
+                            </label>
+                            <label class="align-option">
+                                <input type="radio" name="insert-align" value="full"> 全幅
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="insert-modal-footer">
+                <button class="btn btn-outline" onclick="closeImageInsertModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="insertImageToBody()">挿入する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI画像生成モーダル -->
+    <div class="insert-modal" id="ai-image-modal" style="display: none;">
+        <div class="insert-modal-content">
+            <div class="insert-modal-header">
+                <h3>✨ AI画像生成（キーワード検索）</h3>
+                <button class="btn btn-icon-only" onclick="closeAIImageModal()">✕</button>
+            </div>
+            <div class="insert-modal-body">
+                <div class="ai-search-box">
+                    <input type="text" id="ai-keyword" placeholder="キーワードを入力（例: オフィス, チームワーク, 会議）" class="ai-keyword-input">
+                    <button class="btn btn-primary" onclick="searchAIImages()">🔍 検索</button>
+                </div>
+                <p class="ai-hint">Unsplashから高品質な写真を検索します。英語キーワードも使用可能です。</p>
+
+                <div class="ai-results" id="ai-results">
+                    <div class="ai-placeholder">
+                        <span>🎨</span>
+                        <p>キーワードを入力して検索してください</p>
+                    </div>
+                </div>
+
+                <div class="insert-options" id="ai-options" style="display: none;">
+                    <div class="form-group">
+                        <label>キャプション（任意）</label>
+                        <input type="text" id="ai-caption" placeholder="画像の説明文">
+                    </div>
+                    <div class="form-group">
+                        <label>配置</label>
+                        <div class="insert-align-options">
+                            <label class="align-option">
+                                <input type="radio" name="ai-align" value="left"> 左寄せ
+                            </label>
+                            <label class="align-option">
+                                <input type="radio" name="ai-align" value="center" checked> 中央
+                            </label>
+                            <label class="align-option">
+                                <input type="radio" name="ai-align" value="right"> 右寄せ
+                            </label>
+                            <label class="align-option">
+                                <input type="radio" name="ai-align" value="full"> 全幅
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="insert-modal-footer">
+                <button class="btn btn-outline" onclick="closeAIImageModal()">キャンセル</button>
+                <button class="btn btn-primary" id="ai-insert-btn" onclick="insertAIImageToBody()" disabled>挿入する</button>
             </div>
         </div>
     </div>

@@ -482,6 +482,103 @@ body {
 }
 
 /* ========================================
+   記事内埋め込み画像（大林組風デザイン）
+   ======================================== */
+.embedded-image {
+    margin: 2.5rem 0;
+    padding: 0;
+    clear: both;
+}
+
+.embedded-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    transition: var(--transition);
+}
+
+.embedded-image img:hover {
+    transform: scale(1.01);
+    box-shadow: var(--shadow-xl);
+}
+
+/* 左寄せ */
+.embedded-image-left {
+    float: left;
+    margin: 0.5rem 2rem 1.5rem 0;
+    max-width: 45%;
+}
+
+/* 右寄せ */
+.embedded-image-right {
+    float: right;
+    margin: 0.5rem 0 1.5rem 2rem;
+    max-width: 45%;
+}
+
+/* 中央配置 */
+.embedded-image-center {
+    text-align: center;
+    clear: both;
+}
+
+.embedded-image-center img {
+    max-width: 85%;
+}
+
+/* 全幅 */
+.embedded-image-full {
+    width: 100%;
+    clear: both;
+    margin: 3rem -1.5rem;
+    padding: 0 1.5rem;
+}
+
+.embedded-image-full img {
+    width: 100%;
+    max-width: none;
+    border-radius: var(--radius-lg);
+}
+
+/* キャプション */
+.embedded-caption {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-top: 0.875rem;
+    padding: 0 1rem;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* 画像 + テキストの回り込みクリア */
+.article-detail-body::after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .embedded-image-left,
+    .embedded-image-right {
+        float: none;
+        max-width: 100%;
+        margin: 2rem 0;
+    }
+
+    .embedded-image-center img {
+        max-width: 100%;
+    }
+
+    .embedded-image-full {
+        margin: 2rem -1rem;
+        padding: 0 1rem;
+    }
+}
+
+/* ========================================
    リアクション - モダン
    ======================================== */
 .reactions-section {

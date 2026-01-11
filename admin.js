@@ -567,10 +567,33 @@ function getCategoryDisplay(category) {
 }
 
 function formatBodyText(text) {
+    // 画像タグを変換する関数
+    function convertImageTags(content) {
+        // [IMAGE:URL|キャプション|配置] 形式を検出
+        const imageRegex = /\[IMAGE:([^\|]+)\|([^\|]*)\|([^\]]+)\]/g;
+        return content.replace(imageRegex, (match, url, caption, align) => {
+            const alignClass = `embedded-image-${align || 'center'}`;
+            const captionHtml = caption ? `<figcaption class="embedded-caption">${caption}</figcaption>` : '';
+            return `<figure class="embedded-image ${alignClass}">
+                <img src="${url}" alt="${caption || ''}" loading="lazy">
+                ${captionHtml}
+            </figure>`;
+        });
+    }
+
+    // まず画像タグを変換
+    let processed = convertImageTags(text);
+
     // 改行をbrタグに変換し、段落を分ける
-    return text
+    return processed
         .split('\n\n')
-        .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+        .map(paragraph => {
+            // figureタグを含む場合はそのまま返す
+            if (paragraph.includes('<figure')) {
+                return paragraph;
+            }
+            return `<p>${paragraph.replace(/\n/g, '<br>')}</p>`;
+        })
         .join('');
 }
 
@@ -651,6 +674,290 @@ function saveArticleFromEditor() {
 }
 
 // ========================================
+// 画像挿入モーダル
+// ========================================
+
+let selectedInsertImageUrl = null;
+let insertUploadedImageData = null;
+
+function openImageInsertModal() {
+    document.getElementById('image-insert-modal').style.display = 'flex';
+    selectedInsertImageUrl = null;
+    insertUploadedImageData = null;
+
+    // 選択をリセット
+    document.querySelectorAll('.insert-image-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    document.getElementById('insert-caption').value = '';
+    document.querySelector('input[name="insert-align"][value="center"]').checked = true;
+
+    // ギャラリータブをアクティブに
+    switchInsertTab('gallery');
+}
+
+function closeImageInsertModal() {
+    document.getElementById('image-insert-modal').style.display = 'none';
+}
+
+function switchInsertTab(tab) {
+    const tabs = document.querySelectorAll('.insert-tab');
+    const galleryContent = document.getElementById('insert-gallery');
+    const uploadContent = document.getElementById('insert-upload');
+    const urlContent = document.getElementById('insert-url');
+
+    tabs.forEach(t => t.classList.remove('active'));
+    galleryContent.style.display = 'none';
+    uploadContent.style.display = 'none';
+    urlContent.style.display = 'none';
+
+    if (tab === 'gallery') {
+        tabs[0].classList.add('active');
+        galleryContent.style.display = 'block';
+    } else if (tab === 'upload') {
+        tabs[1].classList.add('active');
+        uploadContent.style.display = 'block';
+    } else if (tab === 'url') {
+        tabs[2].classList.add('active');
+        urlContent.style.display = 'block';
+    }
+}
+
+function getInsertImageUrl() {
+    const tabs = document.querySelectorAll('.insert-tab');
+
+    // アップロードタブがアクティブ
+    if (tabs[1].classList.contains('active') && insertUploadedImageData) {
+        return insertUploadedImageData;
+    }
+
+    // URLタブがアクティブ
+    if (tabs[2].classList.contains('active')) {
+        return document.getElementById('insert-image-url').value.trim();
+    }
+
+    // ギャラリーから選択
+    return selectedInsertImageUrl;
+}
+
+function insertImageToBody() {
+    const imageUrl = getInsertImageUrl();
+    if (!imageUrl) {
+        alert('画像を選択してください');
+        return;
+    }
+
+    const caption = document.getElementById('insert-caption').value.trim();
+    const align = document.querySelector('input[name="insert-align"]:checked').value;
+
+    // 画像タグを生成
+    const imageTag = `[IMAGE:${imageUrl}|${caption}|${align}]`;
+
+    // テキストエリアに挿入
+    const bodyTextarea = document.getElementById('article-body');
+    const cursorPos = bodyTextarea.selectionStart;
+    const currentText = bodyTextarea.value;
+
+    bodyTextarea.value = currentText.substring(0, cursorPos) + '\n' + imageTag + '\n' + currentText.substring(cursorPos);
+
+    // カーソル位置を更新
+    const newPos = cursorPos + imageTag.length + 2;
+    bodyTextarea.selectionStart = newPos;
+    bodyTextarea.selectionEnd = newPos;
+    bodyTextarea.focus();
+
+    // プレビューを更新
+    updatePreview();
+
+    // モーダルを閉じる
+    closeImageInsertModal();
+}
+
+function setupInsertGallery() {
+    document.querySelectorAll('.insert-image-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.insert-image-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            option.classList.add('selected');
+            selectedInsertImageUrl = option.dataset.url;
+        });
+    });
+}
+
+function setupInsertUpload() {
+    const uploadArea = document.getElementById('insert-upload-area');
+    const uploadInput = document.getElementById('insert-image-file');
+    const uploadPreview = document.getElementById('insert-upload-preview');
+    const previewImg = document.getElementById('insert-preview-img');
+
+    if (!uploadArea || !uploadInput) return;
+
+    uploadArea.addEventListener('click', () => {
+        uploadInput.click();
+    });
+
+    uploadInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                insertUploadedImageData = ev.target.result;
+                uploadArea.style.display = 'none';
+                uploadPreview.style.display = 'block';
+                previewImg.src = insertUploadedImageData;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // ドラッグ&ドロップ
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--primary-color)';
+        uploadArea.style.background = '#fff5f5';
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '';
+        uploadArea.style.background = '';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '';
+        uploadArea.style.background = '';
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const file = e.dataTransfer.files[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                insertUploadedImageData = ev.target.result;
+                uploadArea.style.display = 'none';
+                uploadPreview.style.display = 'block';
+                previewImg.src = insertUploadedImageData;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// ========================================
+// AI画像検索モーダル
+// ========================================
+
+let selectedAIImageUrl = null;
+
+function openAIImageModal() {
+    document.getElementById('ai-image-modal').style.display = 'flex';
+    selectedAIImageUrl = null;
+    document.getElementById('ai-keyword').value = '';
+    document.getElementById('ai-caption').value = '';
+    document.querySelector('input[name="ai-align"][value="center"]').checked = true;
+    document.getElementById('ai-results').innerHTML = `
+        <div class="ai-placeholder">
+            <span>🎨</span>
+            <p>キーワードを入力して検索してください</p>
+        </div>
+    `;
+    document.getElementById('ai-options').style.display = 'none';
+    document.getElementById('ai-insert-btn').disabled = true;
+}
+
+function closeAIImageModal() {
+    document.getElementById('ai-image-modal').style.display = 'none';
+}
+
+async function searchAIImages() {
+    const keyword = document.getElementById('ai-keyword').value.trim();
+    if (!keyword) {
+        alert('キーワードを入力してください');
+        return;
+    }
+
+    const resultsDiv = document.getElementById('ai-results');
+    resultsDiv.innerHTML = '<div class="ai-loading"></div>';
+
+    try {
+        // Unsplash Source APIを使用（APIキー不要）
+        // 複数の画像URLを生成
+        const images = [];
+        const baseKeywords = encodeURIComponent(keyword);
+
+        for (let i = 0; i < 9; i++) {
+            images.push({
+                url: `https://source.unsplash.com/800x600/?${baseKeywords}&sig=${Date.now() + i}`,
+                thumb: `https://source.unsplash.com/400x300/?${baseKeywords}&sig=${Date.now() + i}`
+            });
+        }
+
+        // 結果を表示
+        resultsDiv.innerHTML = `
+            <div class="ai-grid">
+                ${images.map((img, index) => `
+                    <div class="ai-image-option" data-url="${img.url}" onclick="selectAIImage(this)">
+                        <img src="${img.thumb}" alt="検索結果 ${index + 1}" loading="lazy">
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('画像検索エラー:', error);
+        resultsDiv.innerHTML = `
+            <div class="ai-placeholder">
+                <span>😕</span>
+                <p>画像の検索に失敗しました。もう一度お試しください。</p>
+            </div>
+        `;
+    }
+}
+
+function selectAIImage(element) {
+    document.querySelectorAll('.ai-image-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    element.classList.add('selected');
+    selectedAIImageUrl = element.dataset.url;
+
+    // オプションを表示
+    document.getElementById('ai-options').style.display = 'block';
+    document.getElementById('ai-insert-btn').disabled = false;
+}
+
+function insertAIImageToBody() {
+    if (!selectedAIImageUrl) {
+        alert('画像を選択してください');
+        return;
+    }
+
+    const caption = document.getElementById('ai-caption').value.trim();
+    const align = document.querySelector('input[name="ai-align"]:checked').value;
+
+    // 画像タグを生成
+    const imageTag = `[IMAGE:${selectedAIImageUrl}|${caption}|${align}]`;
+
+    // テキストエリアに挿入
+    const bodyTextarea = document.getElementById('article-body');
+    const cursorPos = bodyTextarea.selectionStart;
+    const currentText = bodyTextarea.value;
+
+    bodyTextarea.value = currentText.substring(0, cursorPos) + '\n' + imageTag + '\n' + currentText.substring(cursorPos);
+
+    // カーソル位置を更新
+    const newPos = cursorPos + imageTag.length + 2;
+    bodyTextarea.selectionStart = newPos;
+    bodyTextarea.selectionEnd = newPos;
+    bodyTextarea.focus();
+
+    // プレビューを更新
+    updatePreview();
+
+    // モーダルを閉じる
+    closeAIImageModal();
+}
+
+// ========================================
 // イベントリスナー
 // ========================================
 
@@ -704,6 +1011,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // プレビュー更新リスナーのセットアップ
     setupPreviewListeners();
+
+    // 画像挿入モーダルのセットアップ
+    setupInsertGallery();
+    setupInsertUpload();
+
+    // Enterキーで検索
+    const aiKeywordInput = document.getElementById('ai-keyword');
+    if (aiKeywordInput) {
+        aiKeywordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchAIImages();
+            }
+        });
+    }
 
     // ESCキーでエディターを閉じる
     document.addEventListener("keydown", (e) => {

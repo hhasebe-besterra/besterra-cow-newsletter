@@ -274,6 +274,38 @@ function renderArticles(filter = "all", searchQuery = "") {
 // 記事詳細表示
 // ========================================
 
+// 記事本文をフォーマット（画像埋め込み対応）
+function formatArticleBody(text) {
+    // 画像タグを変換する関数
+    function convertImageTags(content) {
+        // [IMAGE:URL|キャプション|配置] 形式を検出
+        const imageRegex = /\[IMAGE:([^\|]+)\|([^\|]*)\|([^\]]+)\]/g;
+        return content.replace(imageRegex, (match, url, caption, align) => {
+            const alignClass = `embedded-image-${align || 'center'}`;
+            const captionHtml = caption ? `<figcaption class="embedded-caption">${caption}</figcaption>` : '';
+            return `<figure class="embedded-image ${alignClass}">
+                <img src="${url}" alt="${caption || ''}" loading="lazy" onerror="this.style.background='#f0f0f0'">
+                ${captionHtml}
+            </figure>`;
+        });
+    }
+
+    // まず画像タグを変換
+    let processed = convertImageTags(text);
+
+    // 改行をbrタグに変換し、段落を分ける
+    return processed
+        .split('\n\n')
+        .map(paragraph => {
+            // figureタグを含む場合はそのまま返す
+            if (paragraph.includes('<figure')) {
+                return paragraph;
+            }
+            return paragraph ? `<p>${paragraph.replace(/\n/g, '<br>')}</p>` : '';
+        })
+        .join('');
+}
+
 function openArticle(articleId) {
     const article = getActiveArticles().find(a => a.id === articleId);
     if (!article) return;
@@ -295,7 +327,7 @@ function openArticle(articleId) {
                 <span>👁️ ${views} 回閲覧</span>
             </div>
             <div class="article-detail-body">
-                ${article.body.split('\n').map(p => p ? `<p>${p}</p>` : '').join('')}
+                ${formatArticleBody(article.body)}
             </div>
 
             <!-- リアクション -->
