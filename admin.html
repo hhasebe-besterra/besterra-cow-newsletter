@@ -295,64 +295,65 @@
                             <span class="form-hint">記事一覧で表示される短い説明文です</span>
                         </div>
 
+                        <!-- ブロックエディタ -->
                         <div class="form-group">
-                            <label for="article-body">
+                            <label>
                                 本文
                                 <span class="required">必須</span>
                             </label>
 
-                            <!-- リッチツールバー -->
-                            <div class="editor-toolbar-rich">
-                                <div class="toolbar-group">
-                                    <span class="toolbar-label">テンプレート</span>
-                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('greeting')" title="挨拶文">
-                                        👋
-                                    </button>
-                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('list')" title="リスト">
-                                        📋
-                                    </button>
-                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('heading')" title="見出し">
-                                        📌
-                                    </button>
-                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('quote')" title="引用">
-                                        💬
+                            <div class="block-editor" id="block-editor">
+                                <!-- ブロック追加バー -->
+                                <div class="block-add-bar">
+                                    <button type="button" class="block-add-btn" onclick="addBlock('paragraph', 0)" title="段落を追加">
+                                        <span class="add-icon">+</span>
+                                        <span>ブロックを追加</span>
                                     </button>
                                 </div>
-                                <div class="toolbar-divider"></div>
-                                <div class="toolbar-group">
-                                    <span class="toolbar-label">画像挿入</span>
-                                    <button type="button" class="toolbar-btn toolbar-btn-primary" onclick="openImageInsertModal()" title="画像を挿入">
-                                        🖼️ 画像
-                                    </button>
-                                    <button type="button" class="toolbar-btn toolbar-btn-ai" onclick="openAIImageModal()" title="AI画像生成">
-                                        ✨ AI生成
-                                    </button>
+
+                                <!-- ブロックコンテナ -->
+                                <div class="blocks-container" id="blocks-container">
+                                    <!-- ブロックがここに動的に追加される -->
                                 </div>
-                                <div class="toolbar-divider"></div>
-                                <div class="toolbar-group">
-                                    <span class="toolbar-label">装飾</span>
-                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('divider')" title="区切り線">
-                                        ➖
-                                    </button>
-                                    <button type="button" class="toolbar-btn" onclick="insertTemplate('signature')" title="署名">
-                                        ✍️
-                                    </button>
+
+                                <!-- 最後のブロック追加ボタン -->
+                                <div class="block-add-final" id="block-add-final">
+                                    <div class="add-block-buttons">
+                                        <button type="button" class="add-block-type" onclick="addBlock('paragraph')" title="段落">
+                                            <span class="block-icon">📝</span>
+                                            <span>段落</span>
+                                        </button>
+                                        <button type="button" class="add-block-type" onclick="addBlock('heading')" title="見出し">
+                                            <span class="block-icon">📌</span>
+                                            <span>見出し</span>
+                                        </button>
+                                        <button type="button" class="add-block-type" onclick="addBlock('image')" title="画像">
+                                            <span class="block-icon">🖼️</span>
+                                            <span>画像</span>
+                                        </button>
+                                        <button type="button" class="add-block-type add-block-type-ai" onclick="addBlock('ai-image')" title="AI画像検索">
+                                            <span class="block-icon">✨</span>
+                                            <span>AI画像</span>
+                                        </button>
+                                        <button type="button" class="add-block-type" onclick="addBlock('quote')" title="引用">
+                                            <span class="block-icon">💬</span>
+                                            <span>引用</span>
+                                        </button>
+                                        <button type="button" class="add-block-type" onclick="addBlock('list')" title="リスト">
+                                            <span class="block-icon">📋</span>
+                                            <span>リスト</span>
+                                        </button>
+                                        <button type="button" class="add-block-type" onclick="addBlock('divider')" title="区切り線">
+                                            <span class="block-icon">➖</span>
+                                            <span>区切り</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <textarea id="article-body" rows="18" placeholder="記事の本文を入力してください
-
-【画像の挿入方法】
-ツールバーの「🖼️ 画像」または「✨ AI生成」ボタンをクリック
-
-【書式例】
-## 見出し
-本文テキスト...
-
-[IMAGE:https://example.com/image.jpg|キャプション|center]
-
-さらに本文..." required></textarea>
-                            <span class="form-hint">💡 画像は [IMAGE:URL|キャプション|配置] の形式で挿入されます。配置: left, center, right, full</span>
+                            <!-- 従来のテキストエディタ（非表示、データ保存用） -->
+                            <textarea id="article-body" style="display: none;"></textarea>
+                            <span class="form-hint">💡 ブロックをドラッグして並べ替え可能。各ブロックで書式設定ができます。</span>
                         </div>
                     </div>
                 </div>

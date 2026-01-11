@@ -16,6 +16,563 @@ const ADMIN_STORAGE_KEYS = {
 let selectedImageUrl = "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=400&fit=crop";
 
 // ========================================
+// ブロックエディタ
+// ========================================
+
+// ブロックデータ
+let blocks = [];
+let blockIdCounter = 0;
+let currentEditingBlockId = null;
+let draggedBlockId = null;
+
+// ブロックタイプ定義
+const BLOCK_TYPES = {
+    paragraph: { label: '段落', icon: '📝' },
+    heading: { label: '見出し', icon: '📌' },
+    image: { label: '画像', icon: '🖼️' },
+    'ai-image': { label: 'AI画像', icon: '✨' },
+    quote: { label: '引用', icon: '💬' },
+    list: { label: 'リスト', icon: '📋' },
+    divider: { label: '区切り', icon: '➖' }
+};
+
+// ブロックを追加
+function addBlock(type, index = null) {
+    const newBlock = {
+        id: ++blockIdCounter,
+        type: type,
+        content: '',
+        settings: {}
+    };
+
+    // タイプ別の初期設定
+    switch (type) {
+        case 'heading':
+            newBlock.settings.level = 'h2';
+            break;
+        case 'image':
+        case 'ai-image':
+            newBlock.settings.url = '';
+            newBlock.settings.caption = '';
+            newBlock.settings.align = 'center';
+            break;
+        case 'list':
+            newBlock.settings.style = 'bullet';
+            break;
+    }
+
+    // 挿入位置
+    if (index !== null && index >= 0) {
+        blocks.splice(index, 0, newBlock);
+    } else {
+        blocks.push(newBlock);
+    }
+
+    // AI画像の場合はモーダルを開く
+    if (type === 'ai-image') {
+        currentEditingBlockId = newBlock.id;
+        openAIImageModalForBlock();
+    }
+    // 通常の画像の場合もモーダルを開く
+    else if (type === 'image') {
+        currentEditingBlockId = newBlock.id;
+        openImageModalForBlock();
+    }
+
+    renderBlocks();
+    updatePreview();
+
+    return newBlock;
+}
+
+// ブロックを削除
+function deleteBlock(blockId) {
+    if (blocks.length === 1) {
+        if (!confirm('最後のブロックを削除しますか？')) return;
+    }
+    blocks = blocks.filter(b => b.id !== blockId);
+    renderBlocks();
+    updatePreview();
+}
+
+// ブロックを移動
+function moveBlock(blockId, direction) {
+    const index = blocks.findIndex(b => b.id === blockId);
+    if (index === -1) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= blocks.length) return;
+
+    [blocks[index], blocks[newIndex]] = [blocks[newIndex], blocks[index]];
+    renderBlocks();
+    updatePreview();
+}
+
+// ブロックをレンダリング
+function renderBlocks() {
+    const container = document.getElementById('blocks-container');
+    if (!container) return;
+
+    if (blocks.length === 0) {
+        container.innerHTML = `
+            <div class="empty-blocks-message" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                <p>📝 下のボタンからブロックを追加してください</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = blocks.map((block, index) => {
+        const typeInfo = BLOCK_TYPES[block.type] || { label: block.type, icon: '📦' };
+        return `
+            <div class="content-block" data-block-id="${block.id}" draggable="true">
+                <div class="block-header">
+                    <div class="block-drag-handle">
+                        <span class="drag-icon">⋮⋮</span>
+                        <span class="block-type-label">${typeInfo.icon} ${typeInfo.label}</span>
+                    </div>
+                    <div class="block-controls">
+                        <button type="button" class="block-control-btn" onclick="moveBlock(${block.id}, 'up')" title="上へ移動" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button type="button" class="block-control-btn" onclick="moveBlock(${block.id}, 'down')" title="下へ移動" ${index === blocks.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button type="button" class="block-control-btn delete" onclick="deleteBlock(${block.id})" title="削除">🗑️</button>
+                    </div>
+                </div>
+                <div class="block-content">
+                    ${renderBlockContent(block)}
+                </div>
+            </div>
+            ${index < blocks.length - 1 ? `
+                <div class="block-inserter">
+                    <button type="button" class="block-inserter-btn" onclick="showBlockMenu(${index + 1})" title="ブロックを挿入">+</button>
+                </div>
+            ` : ''}
+        `;
+    }).join('');
+
+    // ドラッグ&ドロップのセットアップ
+    setupBlockDragAndDrop();
+}
+
+// ブロックコンテンツをレンダリング
+function renderBlockContent(block) {
+    switch (block.type) {
+        case 'paragraph':
+            return `
+                <div class="wysiwyg-editor">
+                    <div class="wysiwyg-toolbar">
+                        <button type="button" class="wysiwyg-btn" onclick="execWysiwyg('bold')" title="太字"><b>B</b></button>
+                        <button type="button" class="wysiwyg-btn" onclick="execWysiwyg('italic')" title="斜体"><i>I</i></button>
+                        <button type="button" class="wysiwyg-btn" onclick="execWysiwyg('underline')" title="下線"><u>U</u></button>
+                        <button type="button" class="wysiwyg-btn" onclick="execWysiwyg('strikeThrough')" title="取り消し線"><s>S</s></button>
+                        <button type="button" class="wysiwyg-btn" onclick="insertLink(${block.id})" title="リンク">🔗</button>
+                    </div>
+                    <div class="wysiwyg-content"
+                         contenteditable="true"
+                         data-block-id="${block.id}"
+                         data-placeholder="テキストを入力..."
+                         oninput="updateBlockContent(${block.id}, this.innerHTML)"
+                         onfocus="setCurrentBlock(${block.id})">${block.content}</div>
+                </div>
+            `;
+
+        case 'heading':
+            return `
+                <div class="heading-block">
+                    <select onchange="updateBlockSetting(${block.id}, 'level', this.value); updateHeadingStyle(this)">
+                        <option value="h2" ${block.settings.level === 'h2' ? 'selected' : ''}>見出し 大 (H2)</option>
+                        <option value="h3" ${block.settings.level === 'h3' ? 'selected' : ''}>見出し 中 (H3)</option>
+                    </select>
+                    <input type="text"
+                           class="heading-input ${block.settings.level}"
+                           placeholder="見出しを入力..."
+                           value="${escapeHtml(block.content)}"
+                           oninput="updateBlockContent(${block.id}, this.value)">
+                </div>
+            `;
+
+        case 'image':
+        case 'ai-image':
+            if (block.settings.url) {
+                return `
+                    <div class="image-block-content">
+                        <div class="image-block-preview">
+                            <img src="${block.settings.url}" alt="${block.settings.caption || ''}">
+                        </div>
+                        <div class="image-block-settings">
+                            <div class="image-setting-group">
+                                <label>キャプション</label>
+                                <input type="text"
+                                       value="${escapeHtml(block.settings.caption || '')}"
+                                       placeholder="画像の説明を入力..."
+                                       oninput="updateBlockSetting(${block.id}, 'caption', this.value)">
+                            </div>
+                            <div class="image-setting-group">
+                                <label>配置</label>
+                                <div class="image-align-buttons">
+                                    <button type="button" class="align-btn ${block.settings.align === 'left' ? 'active' : ''}" onclick="setImageAlign(${block.id}, 'left')">左</button>
+                                    <button type="button" class="align-btn ${block.settings.align === 'center' ? 'active' : ''}" onclick="setImageAlign(${block.id}, 'center')">中央</button>
+                                    <button type="button" class="align-btn ${block.settings.align === 'right' ? 'active' : ''}" onclick="setImageAlign(${block.id}, 'right')">右</button>
+                                    <button type="button" class="align-btn ${block.settings.align === 'full' ? 'active' : ''}" onclick="setImageAlign(${block.id}, 'full')">全幅</button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-small btn-outline" style="margin-top: 0.5rem;" onclick="changeBlockImage(${block.id})">画像を変更</button>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="image-block-content">
+                        <div class="image-block-placeholder" onclick="openImageModalForBlock(${block.id})">
+                            <span class="placeholder-icon">🖼️</span>
+                            <p class="placeholder-text">クリックして画像を選択</p>
+                            <div class="placeholder-buttons">
+                                <button type="button" class="placeholder-btn primary" onclick="event.stopPropagation(); openImageModalForBlock(${block.id})">ギャラリーから選択</button>
+                                <button type="button" class="placeholder-btn" onclick="event.stopPropagation(); openAIImageModalForBlock(${block.id})">AI検索</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+        case 'quote':
+            return `
+                <div class="quote-block-content">
+                    <span class="quote-icon">"</span>
+                    <div class="quote-text"
+                         contenteditable="true"
+                         data-placeholder="引用文を入力..."
+                         oninput="updateBlockContent(${block.id}, this.innerHTML)">${block.content}</div>
+                </div>
+            `;
+
+        case 'list':
+            return `
+                <div class="list-block-content">
+                    <textarea placeholder="・ 項目1
+・ 項目2
+・ 項目3
+
+（各行が箇条書きの項目になります）"
+                              oninput="updateBlockContent(${block.id}, this.value)">${block.content}</textarea>
+                    <p class="list-hint">💡 各行が1つの項目になります。・や- で始めてください。</p>
+                </div>
+            `;
+
+        case 'divider':
+            return `
+                <div class="divider-block-content">
+                    <hr class="divider-line">
+                </div>
+            `;
+
+        default:
+            return `<p>未対応のブロックタイプ: ${block.type}</p>`;
+    }
+}
+
+// ブロックコンテンツを更新
+function updateBlockContent(blockId, content) {
+    const block = blocks.find(b => b.id === blockId);
+    if (block) {
+        block.content = content;
+        updatePreview();
+    }
+}
+
+// ブロック設定を更新
+function updateBlockSetting(blockId, key, value) {
+    const block = blocks.find(b => b.id === blockId);
+    if (block) {
+        block.settings[key] = value;
+        updatePreview();
+    }
+}
+
+// 画像配置を設定
+function setImageAlign(blockId, align) {
+    updateBlockSetting(blockId, 'align', align);
+    renderBlocks();
+}
+
+// 画像を変更
+function changeBlockImage(blockId) {
+    currentEditingBlockId = blockId;
+    openImageModalForBlock(blockId);
+}
+
+// 現在編集中のブロックを設定
+function setCurrentBlock(blockId) {
+    currentEditingBlockId = blockId;
+}
+
+// WYSIWYGコマンドを実行
+function execWysiwyg(command, value = null) {
+    document.execCommand(command, false, value);
+}
+
+// リンクを挿入
+function insertLink(blockId) {
+    const url = prompt('リンクURLを入力してください:');
+    if (url) {
+        document.execCommand('createLink', false, url);
+    }
+}
+
+// 見出しスタイルを更新
+function updateHeadingStyle(select) {
+    const input = select.parentElement.querySelector('.heading-input');
+    input.classList.remove('h2', 'h3');
+    input.classList.add(select.value);
+}
+
+// ブロックメニューを表示
+function showBlockMenu(insertIndex) {
+    // シンプルに段落ブロックを追加
+    addBlock('paragraph', insertIndex);
+}
+
+// ========================================
+// ブロック用画像モーダル
+// ========================================
+
+function openImageModalForBlock(blockId = null) {
+    if (blockId) currentEditingBlockId = blockId;
+
+    // 既存の画像挿入モーダルを流用
+    document.getElementById('image-insert-modal').style.display = 'flex';
+    selectedInsertImageUrl = null;
+    insertUploadedImageData = null;
+
+    document.querySelectorAll('.insert-image-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    document.getElementById('insert-caption').value = '';
+    document.querySelector('input[name="insert-align"][value="center"]').checked = true;
+    switchInsertTab('gallery');
+}
+
+function openAIImageModalForBlock(blockId = null) {
+    if (blockId) currentEditingBlockId = blockId;
+    openAIImageModal();
+}
+
+// 画像をブロックに設定（画像モーダルから呼び出される）
+function setBlockImage(url, caption, align) {
+    if (!currentEditingBlockId) return;
+
+    const block = blocks.find(b => b.id === currentEditingBlockId);
+    if (block && (block.type === 'image' || block.type === 'ai-image')) {
+        block.settings.url = url;
+        block.settings.caption = caption || '';
+        block.settings.align = align || 'center';
+        renderBlocks();
+        updatePreview();
+    }
+    currentEditingBlockId = null;
+}
+
+// ========================================
+// ドラッグ&ドロップ
+// ========================================
+
+function setupBlockDragAndDrop() {
+    const container = document.getElementById('blocks-container');
+    const blockElements = container.querySelectorAll('.content-block');
+
+    blockElements.forEach(block => {
+        block.addEventListener('dragstart', handleDragStart);
+        block.addEventListener('dragend', handleDragEnd);
+        block.addEventListener('dragover', handleDragOver);
+        block.addEventListener('drop', handleDrop);
+        block.addEventListener('dragenter', handleDragEnter);
+        block.addEventListener('dragleave', handleDragLeave);
+    });
+}
+
+function handleDragStart(e) {
+    draggedBlockId = parseInt(e.target.dataset.blockId);
+    e.target.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+    document.querySelectorAll('.content-block').forEach(block => {
+        block.classList.remove('drag-over');
+    });
+    draggedBlockId = null;
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+    e.preventDefault();
+    if (e.target.classList.contains('content-block')) {
+        e.target.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    if (e.target.classList.contains('content-block')) {
+        e.target.classList.remove('drag-over');
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const targetBlockId = parseInt(e.target.closest('.content-block')?.dataset.blockId);
+
+    if (draggedBlockId && targetBlockId && draggedBlockId !== targetBlockId) {
+        const draggedIndex = blocks.findIndex(b => b.id === draggedBlockId);
+        const targetIndex = blocks.findIndex(b => b.id === targetBlockId);
+
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+            const [draggedBlock] = blocks.splice(draggedIndex, 1);
+            blocks.splice(targetIndex, 0, draggedBlock);
+            renderBlocks();
+            updatePreview();
+        }
+    }
+}
+
+// ========================================
+// ブロック <-> テキスト変換
+// ========================================
+
+// ブロックをテキストに変換（保存用）
+function blocksToText() {
+    return blocks.map(block => {
+        switch (block.type) {
+            case 'paragraph':
+                // HTMLタグを除去してプレーンテキストに
+                const div = document.createElement('div');
+                div.innerHTML = block.content;
+                return div.textContent || div.innerText || '';
+
+            case 'heading':
+                const prefix = block.settings.level === 'h2' ? '## ' : '### ';
+                return prefix + block.content;
+
+            case 'image':
+            case 'ai-image':
+                if (block.settings.url) {
+                    return `[IMAGE:${block.settings.url}|${block.settings.caption || ''}|${block.settings.align || 'center'}]`;
+                }
+                return '';
+
+            case 'quote':
+                const quoteDiv = document.createElement('div');
+                quoteDiv.innerHTML = block.content;
+                const quoteText = quoteDiv.textContent || quoteDiv.innerText || '';
+                return `> ${quoteText}`;
+
+            case 'list':
+                return block.content;
+
+            case 'divider':
+                return '━━━━━━━━━━━━━━━━━━━━';
+
+            default:
+                return block.content;
+        }
+    }).filter(text => text.trim()).join('\n\n');
+}
+
+// テキストをブロックに変換（読み込み用）
+function textToBlocks(text) {
+    if (!text) return [];
+
+    const paragraphs = text.split('\n\n');
+    blocks = [];
+    blockIdCounter = 0;
+
+    paragraphs.forEach(para => {
+        const trimmed = para.trim();
+        if (!trimmed) return;
+
+        // 見出し (## or ###)
+        if (trimmed.startsWith('### ')) {
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'heading',
+                content: trimmed.substring(4),
+                settings: { level: 'h3' }
+            });
+        } else if (trimmed.startsWith('## ')) {
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'heading',
+                content: trimmed.substring(3),
+                settings: { level: 'h2' }
+            });
+        }
+        // 画像
+        else if (trimmed.match(/^\[IMAGE:(.+)\|(.*)?\|(left|center|right|full)\]$/)) {
+            const match = trimmed.match(/^\[IMAGE:(.+)\|(.*)\|(left|center|right|full)\]$/);
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'image',
+                content: '',
+                settings: {
+                    url: match[1],
+                    caption: match[2] || '',
+                    align: match[3]
+                }
+            });
+        }
+        // 引用
+        else if (trimmed.startsWith('> ')) {
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'quote',
+                content: trimmed.substring(2),
+                settings: {}
+            });
+        }
+        // 区切り線
+        else if (trimmed.match(/^[━─═]{3,}$/)) {
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'divider',
+                content: '',
+                settings: {}
+            });
+        }
+        // リスト
+        else if (trimmed.split('\n').every(line => line.match(/^[・\-\*◆◇●○]\s/) || !line.trim())) {
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'list',
+                content: trimmed,
+                settings: { style: 'bullet' }
+            });
+        }
+        // 通常の段落
+        else {
+            blocks.push({
+                id: ++blockIdCounter,
+                type: 'paragraph',
+                content: trimmed.replace(/\n/g, '<br>'),
+                settings: {}
+            });
+        }
+    });
+
+    return blocks;
+}
+
+// HTMLエスケープ
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ========================================
 // 認証
 // ========================================
 
@@ -185,6 +742,10 @@ function openArticleModal(articleId = null) {
     document.getElementById("article-excerpt").value = "";
     document.getElementById("article-body").value = "";
 
+    // ブロックエディタをリセット
+    blocks = [];
+    blockIdCounter = 0;
+
     // 画像選択をリセット
     resetImageSelection();
 
@@ -204,10 +765,23 @@ function openArticleModal(articleId = null) {
 
             // 画像を選択状態にする
             selectImageByUrl(article.image);
+
+            // 本文をブロックに変換
+            textToBlocks(article.body);
         }
     } else {
         title.textContent = "新しい記事を作成";
+        // 新規記事の場合、最初の段落ブロックを追加
+        blocks = [{
+            id: ++blockIdCounter,
+            type: 'paragraph',
+            content: '',
+            settings: {}
+        }];
     }
+
+    // ブロックをレンダリング
+    renderBlocks();
 
     // プレビューを更新
     updatePreview();
@@ -551,9 +1125,12 @@ function updatePreview() {
     const imageUrl = getSelectedImageUrl();
     document.getElementById('preview-image').src = imageUrl;
 
-    // 本文
-    const body = document.getElementById('article-body').value || '本文がここに表示されます...';
+    // 本文（ブロックエディタから取得）
+    const body = blocksToText() || '本文がここに表示されます...';
     document.getElementById('preview-body').innerHTML = formatBodyText(body);
+
+    // hidden textareaにも保存（バックアップ用）
+    document.getElementById('article-body').value = body;
 }
 
 function getCategoryDisplay(category) {
@@ -621,7 +1198,9 @@ function saveArticleFromEditor() {
     const author = document.getElementById('article-author').value.trim();
     const date = document.getElementById('article-date').value;
     const excerpt = document.getElementById('article-excerpt').value.trim();
-    const body = document.getElementById('article-body').value.trim();
+
+    // ブロックエディタからテキストを生成
+    const body = blocksToText();
 
     if (!title) {
         alert('タイトルを入力してください');
@@ -648,9 +1227,8 @@ function saveArticleFromEditor() {
         document.getElementById('article-excerpt').focus();
         return;
     }
-    if (!body) {
+    if (!body || blocks.length === 0) {
         alert('本文を入力してください');
-        document.getElementById('article-body').focus();
         return;
     }
 
@@ -750,23 +1328,26 @@ function insertImageToBody() {
     const caption = document.getElementById('insert-caption').value.trim();
     const align = document.querySelector('input[name="insert-align"]:checked').value;
 
-    // 画像タグを生成
-    const imageTag = `[IMAGE:${imageUrl}|${caption}|${align}]`;
+    // ブロックエディタモードの場合
+    if (currentEditingBlockId) {
+        setBlockImage(imageUrl, caption, align);
+        closeImageInsertModal();
+        return;
+    }
 
-    // テキストエリアに挿入
-    const bodyTextarea = document.getElementById('article-body');
-    const cursorPos = bodyTextarea.selectionStart;
-    const currentText = bodyTextarea.value;
-
-    bodyTextarea.value = currentText.substring(0, cursorPos) + '\n' + imageTag + '\n' + currentText.substring(cursorPos);
-
-    // カーソル位置を更新
-    const newPos = cursorPos + imageTag.length + 2;
-    bodyTextarea.selectionStart = newPos;
-    bodyTextarea.selectionEnd = newPos;
-    bodyTextarea.focus();
-
-    // プレビューを更新
+    // 新しい画像ブロックとして追加
+    const newBlock = {
+        id: ++blockIdCounter,
+        type: 'image',
+        content: '',
+        settings: {
+            url: imageUrl,
+            caption: caption,
+            align: align
+        }
+    };
+    blocks.push(newBlock);
+    renderBlocks();
     updatePreview();
 
     // モーダルを閉じる
@@ -934,23 +1515,26 @@ function insertAIImageToBody() {
     const caption = document.getElementById('ai-caption').value.trim();
     const align = document.querySelector('input[name="ai-align"]:checked').value;
 
-    // 画像タグを生成
-    const imageTag = `[IMAGE:${selectedAIImageUrl}|${caption}|${align}]`;
+    // ブロックエディタモードの場合
+    if (currentEditingBlockId) {
+        setBlockImage(selectedAIImageUrl, caption, align);
+        closeAIImageModal();
+        return;
+    }
 
-    // テキストエリアに挿入
-    const bodyTextarea = document.getElementById('article-body');
-    const cursorPos = bodyTextarea.selectionStart;
-    const currentText = bodyTextarea.value;
-
-    bodyTextarea.value = currentText.substring(0, cursorPos) + '\n' + imageTag + '\n' + currentText.substring(cursorPos);
-
-    // カーソル位置を更新
-    const newPos = cursorPos + imageTag.length + 2;
-    bodyTextarea.selectionStart = newPos;
-    bodyTextarea.selectionEnd = newPos;
-    bodyTextarea.focus();
-
-    // プレビューを更新
+    // 新しいAI画像ブロックとして追加
+    const newBlock = {
+        id: ++blockIdCounter,
+        type: 'ai-image',
+        content: '',
+        settings: {
+            url: selectedAIImageUrl,
+            caption: caption,
+            align: align
+        }
+    };
+    blocks.push(newBlock);
+    renderBlocks();
     updatePreview();
 
     // モーダルを閉じる
