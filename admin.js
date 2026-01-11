@@ -237,23 +237,157 @@ function confirmDeleteArticle(id) {
 // 画像選択機能
 // ========================================
 
+// アップロードされた画像のBase64データ
+let uploadedImageData = null;
+
 function switchImageTab(tab) {
-    const galleryTab = document.querySelector('.image-tab:nth-child(1)');
-    const urlTab = document.querySelector('.image-tab:nth-child(2)');
+    const tabs = document.querySelectorAll('.image-tab');
     const galleryContent = document.getElementById('tab-gallery');
+    const uploadContent = document.getElementById('tab-upload');
     const urlContent = document.getElementById('tab-url');
 
+    // すべてのタブを非アクティブに
+    tabs.forEach(t => t.classList.remove('active'));
+    galleryContent.style.display = 'none';
+    uploadContent.style.display = 'none';
+    urlContent.style.display = 'none';
+
+    // 選択されたタブをアクティブに
     if (tab === 'gallery') {
-        galleryTab.classList.add('active');
-        urlTab.classList.remove('active');
+        tabs[0].classList.add('active');
         galleryContent.style.display = 'block';
-        urlContent.style.display = 'none';
-    } else {
-        galleryTab.classList.remove('active');
-        urlTab.classList.add('active');
-        galleryContent.style.display = 'none';
+    } else if (tab === 'upload') {
+        tabs[1].classList.add('active');
+        uploadContent.style.display = 'block';
+    } else if (tab === 'url') {
+        tabs[2].classList.add('active');
         urlContent.style.display = 'block';
     }
+}
+
+// 画像アップロード処理
+function setupImageUpload() {
+    const uploadArea = document.getElementById('upload-area');
+    const uploadInput = document.getElementById('image-upload');
+    const placeholder = document.getElementById('upload-placeholder');
+
+    if (!uploadArea || !uploadInput) return;
+
+    // クリックでファイル選択
+    placeholder.addEventListener('click', () => {
+        uploadInput.click();
+    });
+
+    // ファイル選択時
+    uploadInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+            handleImageUpload(e.target.files[0]);
+        }
+    });
+
+    // ドラッグ&ドロップ
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleImageUpload(e.dataTransfer.files[0]);
+        }
+    });
+}
+
+function handleImageUpload(file) {
+    if (!file.type.startsWith('image/')) {
+        alert('画像ファイルを選択してください');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        uploadedImageData = e.target.result;
+
+        // プレビューを表示
+        const placeholder = document.getElementById('upload-placeholder');
+        const preview = document.getElementById('upload-preview');
+        const previewImg = document.getElementById('upload-preview-img');
+
+        placeholder.style.display = 'none';
+        preview.style.display = 'flex';
+        previewImg.src = uploadedImageData;
+
+        // ファイル名を表示
+        document.getElementById('upload-filename').textContent = file.name;
+
+        // ファイルサイズを表示
+        const fileSizeKB = (file.size / 1024).toFixed(1);
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+        document.getElementById('upload-filesize').textContent =
+            file.size > 1024 * 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`;
+
+        // 画像サイズを取得
+        const img = new Image();
+        img.onload = () => {
+            document.getElementById('upload-dimensions').textContent =
+                `${img.width} x ${img.height} ピクセル`;
+        };
+        img.src = uploadedImageData;
+
+        // 選択中の画像をアップロード画像に設定
+        selectedImageUrl = uploadedImageData;
+        updatePreview();
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearUploadedImage() {
+    uploadedImageData = null;
+    const placeholder = document.getElementById('upload-placeholder');
+    const preview = document.getElementById('upload-preview');
+    const uploadInput = document.getElementById('image-upload');
+
+    placeholder.style.display = 'block';
+    preview.style.display = 'none';
+    uploadInput.value = '';
+
+    // ギャラリーの最初の画像に戻す
+    resetImageSelection();
+}
+
+// URL入力時の画像情報読み込み
+function loadUrlImageInfo() {
+    const urlInput = document.getElementById('article-image');
+    const infoDiv = document.getElementById('url-image-info');
+    const previewImg = document.getElementById('url-preview-img');
+    const dimensionsSpan = document.getElementById('url-dimensions');
+
+    const url = urlInput.value.trim();
+    if (!url) {
+        infoDiv.style.display = 'none';
+        return;
+    }
+
+    // 画像を読み込んでサイズを取得
+    const img = new Image();
+    img.onload = () => {
+        infoDiv.style.display = 'flex';
+        previewImg.src = url;
+        dimensionsSpan.textContent = `${img.width} x ${img.height} ピクセル`;
+        selectedImageUrl = url;
+        updatePreview();
+    };
+    img.onerror = () => {
+        infoDiv.style.display = 'none';
+    };
+    img.src = url;
 }
 
 function resetImageSelection() {
@@ -312,12 +446,19 @@ function setupImageGallery() {
 }
 
 function getSelectedImageUrl() {
+    const tabs = document.querySelectorAll('.image-tab');
+
+    // アップロードタブがアクティブでアップロード画像がある場合
+    if (tabs[1] && tabs[1].classList.contains('active') && uploadedImageData) {
+        return uploadedImageData;
+    }
+
     // URLタブがアクティブならURL入力を使用
-    const urlTab = document.querySelector('.image-tab:nth-child(2)');
-    if (urlTab && urlTab.classList.contains('active')) {
+    if (tabs[2] && tabs[2].classList.contains('active')) {
         const urlInput = document.getElementById('article-image');
         return urlInput.value || selectedImageUrl;
     }
+
     return selectedImageUrl;
 }
 
@@ -557,6 +698,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 画像ギャラリーのセットアップ
     setupImageGallery();
+
+    // 画像アップロードのセットアップ
+    setupImageUpload();
 
     // プレビュー更新リスナーのセットアップ
     setupPreviewListeners();

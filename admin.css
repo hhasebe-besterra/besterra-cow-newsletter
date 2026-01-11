@@ -579,6 +579,105 @@
     background: var(--background-color);
 }
 
+/* 画像アップロードエリア */
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    transition: var(--transition);
+    background: #fafafa;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+    background: #fff5f5;
+}
+
+.upload-area.dragover {
+    border-color: var(--primary-color);
+    background: #fee2e2;
+}
+
+.upload-placeholder {
+    cursor: pointer;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.upload-placeholder p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+}
+
+.upload-hint {
+    font-size: 0.75rem !important;
+    color: var(--text-secondary);
+}
+
+.upload-preview {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: left;
+}
+
+.upload-preview img {
+    width: 200px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.upload-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.info-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.info-size, .info-filesize {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.info-size::before {
+    content: "📐 ";
+}
+
+.info-filesize::before {
+    content: "📁 ";
+}
+
+/* URL画像プレビュー */
+.url-image-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--background-color);
+    border-radius: var(--radius);
+}
+
+.url-image-info img {
+    width: 150px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
 /* ツールバー */
 .editor-toolbar {
     display: flex;
