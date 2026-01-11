@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BEST COW - 社内報</title>
+    <title>ベステラ社内報</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="https://www.besterra.co.jp/favicon.ico" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -14,8 +15,7 @@
     <header class="header">
         <div class="header-content">
             <div class="logo">
-                <span class="logo-icon">🐄</span>
-                <h1>BEST COW</h1>
+                <img src="https://www.besterra.co.jp/images2022/common/logo_nocatch.svg" alt="BESTERRA" class="logo-img">
                 <span class="logo-subtitle">社内報</span>
             </div>
             <nav class="nav">
@@ -38,6 +38,14 @@
 
     <!-- メインコンテンツ -->
     <main class="main-content">
+        <!-- 検索・フィルター -->
+        <section class="search-section">
+            <div class="search-box">
+                <input type="text" id="search-input" class="search-input" placeholder="記事を検索...">
+                <button class="search-btn" onclick="searchArticles()">🔍</button>
+            </div>
+        </section>
+
         <!-- 記事一覧 -->
         <section class="articles-section" id="articles-list">
             <h2 class="section-title">📰 最新の記事</h2>
@@ -59,7 +67,7 @@
 
     <!-- フッター -->
     <footer class="footer">
-        <p>&copy; 2026 BEST COW - 社内報システム</p>
+        <p>&copy; 2026 ベステラ株式会社 - 社内報システム</p>
     </footer>
 
     <script src="script.js"></script>

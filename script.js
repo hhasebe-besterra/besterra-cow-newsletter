@@ -143,7 +143,8 @@ const reactionTypes = [
 // ローカルストレージのキー
 const STORAGE_KEYS = {
     reactions: "bestcow_reactions",
-    comments: "bestcow_comments"
+    comments: "bestcow_comments",
+    views: "bestcow_views"
 };
 
 // ========================================
@@ -184,27 +185,56 @@ function getArticleComments(articleId) {
     return comments[articleId] || [];
 }
 
+// 閲覧数データの取得
+function getViews() {
+    const data = localStorage.getItem(STORAGE_KEYS.views);
+    return data ? JSON.parse(data) : {};
+}
+
+// 閲覧数データの保存
+function saveViews(views) {
+    localStorage.setItem(STORAGE_KEYS.views, JSON.stringify(views));
+}
+
+// 記事の閲覧数を取得
+function getArticleViews(articleId) {
+    const views = getViews();
+    return views[articleId] || 0;
+}
+
+// 記事の閲覧数を増加
+function incrementViews(articleId) {
+    const views = getViews();
+    views[articleId] = (views[articleId] || 0) + 1;
+    saveViews(views);
+    return views[articleId];
+}
+
 // ========================================
 // 記事一覧表示
 // ========================================
 
-function renderArticles(filter = "all") {
+function renderArticles(filter = "all", searchQuery = "") {
     const grid = document.getElementById("articles-grid");
     grid.innerHTML = "";
 
-    const filteredArticles = filter === "all"
-        ? articlesData
-        : articlesData.filter(article => article.category === filter);
+    const filteredArticles = filterArticles(filter, searchQuery || currentSearchQuery);
+
+    if (filteredArticles.length === 0) {
+        grid.innerHTML = '<p style="text-align: center; color: #666; padding: 2rem;">該当する記事が見つかりませんでした。</p>';
+        return;
+    }
 
     filteredArticles.forEach(article => {
         const reactions = getArticleReactions(article.id);
         const totalReactions = Object.values(reactions).reduce((sum, count) => sum + count, 0);
         const comments = getArticleComments(article.id);
+        const views = getArticleViews(article.id);
 
         const card = document.createElement("div");
         card.className = "article-card";
         card.innerHTML = `
-            <img src="${article.image}" alt="${article.title}" class="article-card-image" onerror="this.style.background='linear-gradient(135deg, #e0e7ff, #c7d2fe)'">
+            <img src="${article.image}" alt="${article.title}" class="article-card-image" onerror="this.style.background='linear-gradient(135deg, #fce4ec, #f8bbd9)'">
             <div class="article-card-content">
                 <span class="article-card-category">${article.category}</span>
                 <h3 class="article-card-title">${article.title}</h3>
@@ -212,6 +242,7 @@ function renderArticles(filter = "all") {
                 <div class="article-card-meta">
                     <span>${article.date} | ${article.author}</span>
                     <div class="article-card-stats">
+                        <span>👁️ ${views}</span>
                         <span>👍 ${totalReactions}</span>
                         <span>💬 ${comments.length}</span>
                     </div>
@@ -231,17 +262,21 @@ function openArticle(articleId) {
     const article = articlesData.find(a => a.id === articleId);
     if (!article) return;
 
+    // 閲覧数を増加
+    const views = incrementViews(articleId);
+
     const modal = document.getElementById("article-modal");
     const detail = document.getElementById("article-detail");
 
     detail.innerHTML = `
-        <img src="${article.image}" alt="${article.title}" class="article-detail-image" onerror="this.style.background='linear-gradient(135deg, #e0e7ff, #c7d2fe)'">
+        <img src="${article.image}" alt="${article.title}" class="article-detail-image" onerror="this.style.background='linear-gradient(135deg, #fce4ec, #f8bbd9)'">
         <div class="article-detail-content">
             <span class="article-detail-category">${article.category}</span>
             <h1 class="article-detail-title">${article.title}</h1>
             <div class="article-detail-meta">
                 <span>📅 ${article.date}</span>
                 <span>✍️ ${article.author}</span>
+                <span>👁️ ${views} 回閲覧</span>
             </div>
             <div class="article-detail-body">
                 ${article.body.split('\n').map(p => p ? `<p>${p}</p>` : '').join('')}
@@ -398,6 +433,40 @@ function deleteComment(articleId, index) {
 }
 
 // ========================================
+// 検索機能
+// ========================================
+
+let currentSearchQuery = "";
+
+function searchArticles() {
+    const input = document.getElementById("search-input");
+    currentSearchQuery = input.value.trim().toLowerCase();
+    renderArticles(getCurrentFilter(), currentSearchQuery);
+}
+
+function filterArticles(filter, searchQuery = "") {
+    let filtered = articlesData;
+
+    // カテゴリフィルター
+    if (filter !== "all") {
+        filtered = filtered.filter(article => article.category === filter);
+    }
+
+    // 検索フィルター
+    if (searchQuery) {
+        filtered = filtered.filter(article =>
+            article.title.toLowerCase().includes(searchQuery) ||
+            article.excerpt.toLowerCase().includes(searchQuery) ||
+            article.body.toLowerCase().includes(searchQuery) ||
+            article.author.toLowerCase().includes(searchQuery) ||
+            article.category.toLowerCase().includes(searchQuery)
+        );
+    }
+
+    return filtered;
+}
+
+// ========================================
 // ユーティリティ
 // ========================================
 
@@ -420,12 +489,25 @@ document.addEventListener("DOMContentLoaded", () => {
     // 記事一覧を表示
     renderArticles();
 
+    // 検索ボックス - Enterキーで検索
+    document.getElementById("search-input").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            searchArticles();
+        }
+    });
+
+    // 検索ボックス - リアルタイム検索
+    document.getElementById("search-input").addEventListener("input", (e) => {
+        currentSearchQuery = e.target.value.trim().toLowerCase();
+        renderArticles(getCurrentFilter(), currentSearchQuery);
+    });
+
     // フィルターボタン
     document.querySelectorAll(".nav-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            renderArticles(btn.dataset.filter);
+            renderArticles(btn.dataset.filter, currentSearchQuery);
         });
     });
 
