@@ -150,8 +150,18 @@ const reactionTypes = [
 const STORAGE_KEYS = {
     reactions: "bestcow_reactions",
     comments: "bestcow_comments",
-    views: "bestcow_views"
+    views: "bestcow_views",
+    customArticles: "bestcow_custom_articles"
 };
+
+// カスタム記事があれば読み込む
+function getActiveArticles() {
+    const customArticles = localStorage.getItem(STORAGE_KEYS.customArticles);
+    if (customArticles) {
+        return JSON.parse(customArticles);
+    }
+    return articlesData;
+}
 
 // ========================================
 // データ管理
@@ -265,7 +275,7 @@ function renderArticles(filter = "all", searchQuery = "") {
 // ========================================
 
 function openArticle(articleId) {
-    const article = articlesData.find(a => a.id === articleId);
+    const article = getActiveArticles().find(a => a.id === articleId);
     if (!article) return;
 
     // 閲覧数を増加
@@ -451,7 +461,7 @@ function searchArticles() {
 }
 
 function filterArticles(filter, searchQuery = "") {
-    let filtered = articlesData;
+    let filtered = getActiveArticles();
 
     // カテゴリフィルター
     if (filter !== "all") {

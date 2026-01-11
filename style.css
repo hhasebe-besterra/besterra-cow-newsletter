@@ -3,11 +3,12 @@
    ======================================== */
 
 :root {
-    /* ベステラ コーポレートカラー（赤系） */
-    --primary-color: #C41E3A;
-    --primary-dark: #9B1B30;
+    /* ベステラ コーポレートカラー（公式サイトより抽出） */
+    --primary-color: #c8161d;
+    --primary-dark: #b10f17;
+    --primary-hover: #bc0f16;
     --secondary-color: #1a1a1a;
-    --accent-color: #E8384F;
+    --accent-color: #c9151e;
     --background-color: #fafafa;
     --card-background: #ffffff;
     --text-primary: #1a1a1a;
@@ -107,7 +108,7 @@ body {
    ヒーロー
    ======================================== */
 .hero {
-    background: linear-gradient(135deg, #C41E3A 0%, #9B1B30 100%);
+    background: linear-gradient(135deg, #c8161d 0%, #b10f17 100%);
     color: white;
     padding: 4rem 2rem;
     text-align: center;

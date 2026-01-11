@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理画面 - ベステラ社内報</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="https://www.besterra.co.jp/favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <!-- ログイン画面 -->
+    <div class="login-overlay" id="login-overlay">
+        <div class="login-box">
+            <div class="login-header">
+                <img src="https://www.besterra.co.jp/images2022/common/logo.svg" alt="BESTERRA" class="login-logo">
+                <h1>管理者ログイン</h1>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="admin-password">パスワード</label>
+                    <input type="password" id="admin-password" placeholder="管理者パスワードを入力" required>
+                </div>
+                <button type="submit" class="btn btn-primary">ログイン</button>
+                <p class="login-error" id="login-error"></p>
+            </form>
+            <a href="index.html" class="back-link">トップページに戻る</a>
+        </div>
+    </div>
+
+    <!-- 管理画面 -->
+    <div class="admin-container" id="admin-container" style="display: none;">
+        <!-- ヘッダー -->
+        <header class="admin-header">
+            <div class="admin-header-content">
+                <div class="admin-logo">
+                    <img src="https://www.besterra.co.jp/images2022/common/logo_nocatch.svg" alt="BESTERRA" class="logo-img">
+                    <span class="admin-title">管理画面</span>
+                </div>
+                <div class="admin-nav">
+                    <a href="index.html" class="btn btn-outline">サイトを見る</a>
+                    <button class="btn btn-secondary" onclick="logout()">ログアウト</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main class="admin-main">
+            <!-- 統計 -->
+            <section class="admin-stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="stat-articles">0</span>
+                    <span class="stat-label">記事数</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="stat-views">0</span>
+                    <span class="stat-label">総閲覧数</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="stat-comments">0</span>
+                    <span class="stat-label">コメント数</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="stat-reactions">0</span>
+                    <span class="stat-label">リアクション数</span>
+                </div>
+            </section>
+
+            <!-- 記事管理 -->
+            <section class="admin-section">
+                <div class="section-header">
+                    <h2>記事管理</h2>
+                    <button class="btn btn-primary" onclick="openArticleModal()">+ 新規記事</button>
+                </div>
+                <div class="articles-table-container">
+                    <table class="articles-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>タイトル</th>
+                                <th>カテゴリ</th>
+                                <th>著者</th>
+                                <th>日付</th>
+                                <th>閲覧数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="articles-tbody">
+                            <!-- JavaScriptで挿入 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- パスワード変更 -->
+            <section class="admin-section">
+                <h2>パスワード変更</h2>
+                <form id="password-form" class="password-form">
+                    <div class="form-group">
+                        <label for="new-password">新しいパスワード</label>
+                        <input type="password" id="new-password" placeholder="新しいパスワード" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">パスワード確認</label>
+                        <input type="password" id="confirm-password" placeholder="パスワードを再入力" required>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">パスワードを変更</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- 記事編集モーダル -->
+    <div class="modal" id="article-modal">
+        <div class="modal-content modal-large">
+            <button class="modal-close" onclick="closeArticleModal()">&times;</button>
+            <h2 id="modal-title">新規記事</h2>
+            <form id="article-form">
+                <input type="hidden" id="article-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="article-title">タイトル *</label>
+                        <input type="text" id="article-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="article-category">カテゴリ *</label>
+                        <select id="article-category" required>
+                            <option value="">選択してください</option>
+                            <option value="人事部">人事部</option>
+                            <option value="社長室">社長室</option>
+                            <option value="営業部">営業部</option>
+                            <option value="開発部">開発部</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="article-author">著者 *</label>
+                        <input type="text" id="article-author" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="article-date">日付 *</label>
+                        <input type="date" id="article-date" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="article-image">画像URL</label>
+                    <input type="url" id="article-image" placeholder="https://...">
+                </div>
+                <div class="form-group">
+                    <label for="article-excerpt">要約 *</label>
+                    <textarea id="article-excerpt" rows="2" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="article-body">本文 *</label>
+                    <textarea id="article-body" rows="10" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeArticleModal()">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
